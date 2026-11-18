@@ -3,6 +3,7 @@ import { clamp } from "../../../shared/document";
 export function seek(doc: Document, index: number) {
   doc.playing = false;
   doc.step = clamp(index, 0, doc.steps.length - 1);
+  doc.cue = doc.step;
   doc.angles = { ...doc.steps[doc.step]!.angles };
   const c = doc.paper.creases[doc.step - 1];
   if (c) doc.selected = c.id;
@@ -13,4 +14,5 @@ export function captureStep(doc: Document) {
     step.angles = { ...doc.angles };
     step.note = "已保存当前折叠形态，可随时还原。";
   }
+  return step;
 }

@@ -6,6 +6,7 @@ export function replacePaper(doc: Document, paper: Paper) {
   doc.directions = Object.fromEntries(paper.creases.map((c) => [c.id, 1]));
   doc.playing = false;
   doc.step = 0;
+  doc.cue = 0;
 }
 export function setMaterial(doc: Document, front: string, back: string) {
   doc.front = front;

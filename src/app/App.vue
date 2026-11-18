@@ -30,11 +30,21 @@ import {
   captureStep,
   usePlayer,
 } from "../features/sequence";
-import { Viewport, ObservePanel, setView } from "../features/observe";
+import {
+  Viewport,
+  ObservePanel,
+  teachingTarget,
+  useTeachingCamera,
+  saveStepShot,
+  clearStepShot,
+  restoreTeachingView,
+  toggleTeachingView,
+} from "../features/observe";
 const doc = reactive(createDocument(papers[0]!, makeSteps(papers[0]!)));
 const pose = computed(() => solvePose(doc.paper, doc.angles)),
   hinges = computed(() => hingePositions(doc.paper, pose.value));
 const { toggle } = usePlayer(doc);
+useTeachingCamera(doc, () => teachingTarget(doc, pose.value));
 const help = ref(false),
   toast = ref("");
 function notify(s: string) {
@@ -46,18 +56,25 @@ function choosePaper(id: string) {
   if (p) {
     replacePaper(doc, p);
     doc.steps = makeSteps(p);
-    setView(doc, "iso");
+    restoreTeachingView(doc);
   }
 }
 function reset() {
   flatten(doc);
   doc.steps = makeSteps(doc.paper);
-  setView(doc, "iso");
+  restoreTeachingView(doc);
   notify("已回到平展纸张");
 }
 function capture() {
   captureStep(doc);
   notify("当前形态已保存到步骤 " + (doc.step + 1));
+}
+function captureShot() {
+  if (saveStepShot(doc)) notify("镜头已保存到步骤 " + (doc.step + 1));
+}
+function showProduct() {
+  seek(doc, doc.steps.length - 1);
+  restoreTeachingView(doc);
 }
 </script>
 <template>
@@ -76,7 +93,7 @@ function capture() {
           <HelpCircle :size="18" /></button
         ><button class="reset" @click="reset">
           <RotateCcw :size="14" />重新开始</button
-        ><button class="primary" @click="seek(doc, doc.steps.length - 1)">
+        ><button class="primary" @click="showProduct">
           观察成品 <ArrowUpRight :size="15" />
         </button>
       </div>
@@ -145,7 +162,11 @@ function capture() {
             @angle="changeAngle(doc, $event)"
             @direction="toggleDirection(doc)"
             @target="applyTarget(doc)"
-          /><ObservePanel :doc="doc" />
+          /><ObservePanel
+            :doc="doc"
+            @camera="restoreTeachingView(doc)"
+            @clear="clearStepShot(doc)"
+          />
         </aside>
       </div>
       <SequencePanel
@@ -153,6 +174,8 @@ function capture() {
         @seek="seek(doc, $event)"
         @play="toggle"
         @capture="capture"
+        @shot="captureShot"
+        @camera="toggleTeachingView(doc)"
       />
       <footer>
         <span>ORI / 折间 <i>用折叠，重新认识一张纸。</i></span
@@ -173,6 +196,9 @@ function capture() {
         </p>
         <p>
           下方步骤可还原对应形态，也可保存当前角度后播放。拖动画面旋转视角，滚轮缩放，下载按钮可保存当前观察图。
+        </p>
+        <p>
+          每个步骤都能「存为镜头」，播放时镜头会围绕真实折轴平滑跟随。手动拖动会立刻接管视角，点「教学镜头」即可恢复，折角不会改变。
         </p>
         <p>作品保留在本次会话中，刷新会重新开始。</p>
         <button class="primary" @click="help = false">开始探索 ↗</button>

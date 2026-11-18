@@ -21,17 +21,30 @@ export interface Paper {
   faces: Face[];
   creases: Crease[];
 }
+export interface Shot {
+  yaw: number;
+  pitch: number;
+  zoom: number;
+  focus: Vec3;
+  radius: number;
+}
 export interface Step {
   id: string;
   title: string;
   note: string;
   angles: Record<string, number>;
   duration: number;
+  /** Saved teaching camera. Older documents may not have one. */
+  shot?: Shot;
 }
 export interface View {
   yaw: number;
   pitch: number;
   zoom: number;
+  /** World-space look-at point. */
+  focus: Vec3;
+  /** World-space radius that should fit inside the viewport. */
+  radius: number;
   grid: boolean;
   wire: boolean;
 }
@@ -48,6 +61,10 @@ export interface Document {
   playing: boolean;
   speed: number;
   view: View;
+  /** Whether the camera is following the teaching shot. */
+  follow: boolean;
+  /** Step whose fold is currently being taught (may be ahead of `step`). */
+  cue: number;
 }
 export interface PoseFace {
   id: string;

@@ -2,7 +2,14 @@
 import { computed, ref } from "vue";
 import type { Document, PoseFace } from "../../../shared/types";
 import { project, polygon, cameraPoint } from "../lib/projection";
-import { orbit, zoom, setView } from "../model/camera";
+import { useFrame } from "../lib/frame";
+import {
+  orbit,
+  zoom,
+  setView,
+  toggleTeachingView,
+  takeOver,
+} from "../model/camera";
 import { downloadView } from "../lib/export";
 const props = defineProps<{
   doc: Document;
@@ -15,6 +22,13 @@ const props = defineProps<{
 }>();
 defineEmits<{ select: [id: string] }>();
 const svg = ref<SVGSVGElement>();
+// Measure the rendered SVG itself, so the virtual scene always matches the
+// box the browser actually gives us at this window width.
+const frame = useFrame(svg);
+const box = computed(
+  () => `0 0 ${frame.value.width.toFixed(0)} ${frame.value.height}`,
+);
+const view = computed(() => props.doc.view);
 let drag = false,
   lastX = 0,
   lastY = 0;
@@ -23,14 +37,17 @@ const faces = computed(() =>
     .map((f) => ({
       ...f,
       depth:
-        f.points.reduce((s, p) => s + project(p, props.doc.view).z, 0) /
+        f.points.reduce((s, p) => s + project(p, view.value, frame.value).z, 0) /
         f.points.length,
-      back: cameraPoint(f.normal, props.doc.view)[2] > 0,
+      back: cameraPoint(f.normal, view.value)[2] > 0,
     }))
     .sort((a, b) => a.depth - b.depth),
 );
 function down(e: PointerEvent) {
   if ((e.target as Element).closest(".hinge")) return;
+  // Take over on press, not on the first move: the camera must stop easing
+  // the instant the user grabs it.
+  takeOver(props.doc);
   drag = true;
   lastX = e.clientX;
   lastY = e.clientY;
@@ -56,7 +73,7 @@ function move(e: PointerEvent) {
     <svg
       ref="svg"
       class="paper-scene"
-      viewBox="0 0 800 560"
+      :viewBox="box"
       aria-label="三维折纸预览"
       @pointerdown="down"
       @pointermove="move"
@@ -86,20 +103,29 @@ function move(e: PointerEvent) {
         </pattern>
         <filter id="shadow"><feGaussianBlur stdDeviation="15" /></filter>
       </defs>
-      <rect width="800" height="560" fill="#f6f7f2" />
-      <rect v-if="doc.view.grid" width="800" height="560" fill="url(#grid)" />
+      <rect
+        :width="frame.width"
+        :height="frame.height"
+        fill="#f6f7f2"
+      />
+      <rect
+        v-if="doc.view.grid"
+        :width="frame.width"
+        :height="frame.height"
+        fill="url(#grid)"
+      />
       <ellipse
-        cx="400"
-        cy="401"
-        rx="180"
-        ry="32"
+        :cx="frame.cx"
+        :cy="frame.cy + frame.safe * 0.34"
+        :rx="frame.safe * 0.42"
+        :ry="frame.safe * 0.075"
         fill="#63705a"
         opacity=".15"
         filter="url(#shadow)"
       />
       <g v-for="f in faces" :key="f.id" :data-face="f.id">
         <polygon
-          :points="polygon(f.points, doc.view)"
+          :points="polygon(f.points, view, frame)"
           :fill="f.back ? doc.back : doc.front"
           stroke="#785945"
           stroke-opacity=".35"
@@ -107,13 +133,13 @@ function move(e: PointerEvent) {
           stroke-linejoin="round"
         />
         <polygon
-          :points="polygon(f.points, doc.view)"
+          :points="polygon(f.points, view, frame)"
           fill="#314638"
           :opacity="Math.max(0, 0.1 + f.normal[1] * 0.08)"
         />
         <polygon
           v-if="doc.texture !== 'plain'"
-          :points="polygon(f.points, doc.view)"
+          :points="polygon(f.points, view, frame)"
           :fill="'url(#' + doc.texture + ')'"
         />
       </g>
@@ -125,31 +151,31 @@ function move(e: PointerEvent) {
           @click.stop="$emit('select', h.id)"
         >
           <line
-            :x1="project(h.a, doc.view).x"
-            :y1="project(h.a, doc.view).y"
-            :x2="project(h.b, doc.view).x"
-            :y2="project(h.b, doc.view).y"
+            :x1="project(h.a, view, frame).x"
+            :y1="project(h.a, view, frame).y"
+            :x2="project(h.b, view, frame).x"
+            :y2="project(h.b, view, frame).y"
             stroke="transparent"
             stroke-width="18"
           />
           <line
-            :x1="project(h.a, doc.view).x"
-            :y1="project(h.a, doc.view).y"
-            :x2="project(h.b, doc.view).x"
-            :y2="project(h.b, doc.view).y"
+            :x1="project(h.a, view, frame).x"
+            :y1="project(h.a, view, frame).y"
+            :x2="project(h.b, view, frame).x"
+            :y2="project(h.b, view, frame).y"
             :stroke="h.id === doc.selected ? '#fff8d9' : '#746f57'"
             :stroke-width="h.id === doc.selected ? 2.5 : 1.2"
             stroke-dasharray="5 4"
           />
           <circle
-            :cx="(project(h.a, doc.view).x + project(h.b, doc.view).x) / 2"
-            :cy="(project(h.a, doc.view).y + project(h.b, doc.view).y) / 2"
+            :cx="(project(h.a, view, frame).x + project(h.b, view, frame).x) / 2"
+            :cy="(project(h.a, view, frame).y + project(h.b, view, frame).y) / 2"
             r="11"
             :fill="h.id === doc.selected ? '#384d3f' : '#f7f6ee'"
           />
           <text
-            :x="(project(h.a, doc.view).x + project(h.b, doc.view).x) / 2"
-            :y="(project(h.a, doc.view).y + project(h.b, doc.view).y) / 2 + 3.5"
+            :x="(project(h.a, view, frame).x + project(h.b, view, frame).x) / 2"
+            :y="(project(h.a, view, frame).y + project(h.b, view, frame).y) / 2 + 3.5"
             text-anchor="middle"
             font-size="10"
             :fill="h.id === doc.selected ? 'white' : '#555'"
@@ -158,7 +184,10 @@ function move(e: PointerEvent) {
           </text>
         </g>
       </g>
-      <g transform="translate(58,475)" stroke-width="1.5">
+      <g
+        :transform="`translate(58,${frame.height - 85})`"
+        stroke-width="1.5"
+      >
         <path d="M0 0l28 12" stroke="#be806c" />
         <path d="M0 0v-30" stroke="#839b72" />
         <path d="M0 0l-18 15" stroke="#839eae" />
@@ -186,6 +215,13 @@ function move(e: PointerEvent) {
         ⌁</button
       ><i></i><button title="放大" @click="zoom(doc, 0.1)">＋</button
       ><button title="缩小" @click="zoom(doc, -0.1)">−</button
+      ><button
+        title="教学镜头 / 自由视角"
+        :class="{ selected: doc.follow }"
+        :aria-pressed="doc.follow"
+        @click="toggleTeachingView(doc)"
+      >
+        ◉</button
       ><button title="重置视角" @click="setView(doc, 'iso')">⤢</button><i></i
       ><button title="下载观察图" @click="svg && downloadView(svg)">↓</button>
     </div>

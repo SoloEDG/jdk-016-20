@@ -656,6 +656,64 @@ input[type="range"] {
 .observe-panel .section-heading {
   text-align: left;
 }
+.camera-state {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  text-align: left;
+  border: 1px solid #e2ead6;
+  border-radius: 6px;
+  background: #f7faf1;
+  padding: 8px 9px;
+  margin-bottom: 8px;
+}
+.camera-state > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: #5f7350;
+}
+.camera-state > span i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #7d9a63;
+}
+.camera-state.free {
+  border-color: #e9e2d4;
+  background: #fbf8f1;
+}
+.camera-state.free > span {
+  color: #a08a64;
+}
+.camera-state.free > span i {
+  background: #c4a675;
+}
+.camera-state small {
+  font-size: 8px;
+  color: #9aa88c;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.camera-state button {
+  margin-left: auto;
+}
+.camera-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.camera-actions span {
+  font-size: 8px;
+  color: #a9b19e;
+}
 .inspect-icon {
   font-size: 30px;
   color: #a4b58c;
@@ -696,6 +754,8 @@ input[type="range"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 .timeline-top > div:first-child {
   display: flex;
@@ -715,7 +775,10 @@ input[type="range"] {
 .playback {
   display: flex;
   align-items: center;
-  gap: 13px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px 13px;
+  min-width: 0;
 }
 .playback select {
   width: 53px;
@@ -741,6 +804,27 @@ input[type="range"] {
   padding: 7px 10px;
   margin-left: 8px;
 }
+.playback .camera-toggle {
+  font-size: 9px;
+  border: 1px solid #e1e7d8;
+  border-radius: 4px;
+  padding: 6px 9px;
+  color: #93a082;
+  white-space: nowrap;
+}
+.playback .camera-toggle.selected {
+  border-color: #b4c6a3;
+  background: #f1f6ea;
+  color: #55703f;
+}
+.playback .save-shot {
+  margin-left: 0;
+}
+.playback .save-shot.saved {
+  border-color: #b9cba7;
+  background: #f3f7ec;
+  color: #5c7546;
+}
 .step-track {
   display: flex;
   margin-top: 26px;
@@ -754,6 +838,13 @@ input[type="range"] {
   flex: 1;
   gap: 11px;
   padding: 3px 0;
+}
+.shot-flag {
+  font-style: normal;
+  font-size: 8px;
+  color: #8ca173;
+  align-self: flex-start;
+  margin-left: -4px;
 }
 .step-dot {
   display: grid;
@@ -968,8 +1059,22 @@ footer small {
   .timeline {
     padding: 18px 15px;
   }
+  .timeline-top {
+    align-items: flex-start;
+  }
   .timeline-top > div:first-child b {
     display: none;
+  }
+  .playback {
+    gap: 6px 8px;
+  }
+  .playback .save-step {
+    padding: 6px 7px;
+    margin-left: 0;
+  }
+  .playback .camera-toggle {
+    padding: 6px 7px;
+    font-size: 8px;
   }
   .step-track {
     gap: 8px;
